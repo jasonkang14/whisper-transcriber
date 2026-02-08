@@ -2,6 +2,7 @@ import { pipeline } from "@huggingface/transformers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let transcriber: any = null;
+let currentModel = "";
 
 self.addEventListener("message", async (event: MessageEvent) => {
     const { type } = event.data;
@@ -37,6 +38,7 @@ async function loadModel({
             },
         );
 
+        currentModel = model;
         post({ type: "ready" });
     } catch (err) {
         post({ type: "error", message: String(err) });
@@ -52,11 +54,12 @@ async function runTranscription({ audio }: { audio: Float32Array }) {
     try {
         post({ type: "transcribing" });
 
+        const isDistil = currentModel.includes("distil-whisper");
         const result = await transcriber(audio, {
             top_k: 0,
             do_sample: false,
-            chunk_length_s: 30,
-            stride_length_s: 5,
+            chunk_length_s: isDistil ? 20 : 30,
+            stride_length_s: isDistil ? 3 : 5,
             return_timestamps: true,
             force_full_sequences: false,
 

@@ -7,6 +7,9 @@ const MODELS = [
     { id: "onnx-community/whisper-tiny", label: "whisper-tiny (41 MB)" },
     { id: "onnx-community/whisper-base", label: "whisper-base (77 MB)" },
     { id: "onnx-community/whisper-small", label: "whisper-small (249 MB)" },
+    { id: "distil-whisper/distil-medium.en", label: "distil-medium.en (402 MB)" },
+    { id: "distil-whisper/distil-large-v3", label: "distil-large-v3 (756 MB)" },
+    { id: "onnx-community/whisper-large-v3-turbo", label: "whisper-large-v3-turbo (1.6 GB)" },
 ];
 
 const HISTORY_KEY = "whisper_history";
