@@ -107,9 +107,12 @@ export function App() {
     };
 
     const modelReady = whisper.modelState === "ready";
+    const isLoading = whisper.modelState === "loading";
     const isBusy = whisper.transcribeState === "busy";
     const hasAudio = !!(audioBlob || uploadedFile);
     const canTranscribe = modelReady && hasAudio && !isBusy;
+    const selectedIsDifferent = whisper.loadedModel !== model;
+    const canLoad = !isLoading && !isBusy && (selectedIsDifferent || !modelReady);
     const activeResult = viewingResult || whisper.result;
     const progressEntries = Object.entries(whisper.progress);
 
@@ -127,11 +130,12 @@ export function App() {
                     id="model-select"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    disabled={whisper.modelState === "loading" || modelReady}
+                    disabled={isLoading || isBusy}
                 >
                     {MODELS.map((m) => (
                         <option key={m.id} value={m.id}>
                             {m.label}
+                            {whisper.loadedModel === m.id ? " (loaded)" : ""}
                         </option>
                     ))}
                 </select>
@@ -141,15 +145,15 @@ export function App() {
                 <button
                     className="load-btn"
                     onClick={handleLoad}
-                    disabled={
-                        whisper.modelState === "loading" || modelReady
-                    }
+                    disabled={!canLoad}
                 >
-                    {modelReady
-                        ? "Loaded"
-                        : whisper.modelState === "loading"
-                          ? "Loading..."
-                          : "Load Model"}
+                    {isLoading
+                        ? "Loading..."
+                        : modelReady && selectedIsDifferent
+                          ? "Switch Model"
+                          : modelReady
+                            ? "Loaded"
+                            : "Load Model"}
                 </button>
             </div>
 
@@ -176,7 +180,7 @@ export function App() {
             {/* ── Status ── */}
             {modelReady && (
                 <div className="status ready">
-                    Model loaded — ready to transcribe
+                    {whisper.loadedModel?.split("/").pop()} loaded — ready to transcribe
                 </div>
             )}
             {whisper.error && (

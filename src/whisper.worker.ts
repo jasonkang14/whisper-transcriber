@@ -18,6 +18,16 @@ async function loadModel({
     device: string;
 }) {
     try {
+        // Dispose previous model if switching
+        if (transcriber) {
+            try {
+                await transcriber.dispose();
+            } catch {
+                // ignore disposal errors
+            }
+            transcriber = null;
+        }
+
         post({ type: "loading" });
 
         transcriber = await pipeline(

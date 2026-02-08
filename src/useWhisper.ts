@@ -17,12 +17,14 @@ export function useWhisper() {
     const workerRef = useRef<Worker | null>(null);
 
     const [modelState, setModelState] = useState<ModelState>("idle");
+    const [loadedModel, setLoadedModel] = useState<string | null>(null);
     const [transcribeState, setTranscribeState] =
         useState<TranscribeState>("idle");
     const [progress, setProgress] = useState<Record<string, number>>({});
     const [partialText, setPartialText] = useState("");
     const [result, setResult] = useState<TranscriptionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const pendingModelRef = useRef<string | null>(null);
 
     // Create worker once
     useEffect(() => {
@@ -50,6 +52,7 @@ export function useWhisper() {
 
                 case "ready":
                     setModelState("ready");
+                    setLoadedModel(pendingModelRef.current);
                     setProgress({});
                     break;
 
@@ -82,6 +85,7 @@ export function useWhisper() {
 
     const loadModel = useCallback((model: string, device: string) => {
         setError(null);
+        pendingModelRef.current = model;
         workerRef.current?.postMessage({ type: "load", model, device });
     }, []);
 
@@ -95,6 +99,7 @@ export function useWhisper() {
 
     return {
         modelState,
+        loadedModel,
         transcribeState,
         progress,
         partialText,
