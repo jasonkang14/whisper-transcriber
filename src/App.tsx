@@ -13,6 +13,30 @@ const MODELS = [
 ];
 
 const HISTORY_KEY = "whisper_history";
+const LAST_MODEL_KEY = "whisper_last_model";
+
+interface LastModelEntry {
+    model: string;
+    device: "webgpu" | "wasm";
+}
+
+function loadLastModel(): LastModelEntry | null {
+    try {
+        const raw = localStorage.getItem(LAST_MODEL_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed.model && MODELS.some((m) => m.id === parsed.model)) {
+            return parsed;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function saveLastModel(model: string, device: "webgpu" | "wasm") {
+    localStorage.setItem(LAST_MODEL_KEY, JSON.stringify({ model, device }));
+}
 
 interface HistoryEntry {
     text: string;
@@ -38,8 +62,8 @@ function saveHistory(entries: HistoryEntry[]) {
 export function App() {
     const whisper = useWhisper();
 
-    const [device, setDevice] = useState<"webgpu" | "wasm">("wasm");
-    const [model, setModel] = useState(MODELS[1].id);
+    const [device, setDevice] = useState<"webgpu" | "wasm">(() => loadLastModel()?.device ?? "wasm");
+    const [model, setModel] = useState(() => loadLastModel()?.model ?? MODELS[1].id);
     const [tab, setTab] = useState<"record" | "upload">("record");
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -50,8 +74,13 @@ export function App() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Detect WebGPU on mount
+    // On mount: auto-load saved model, or detect WebGPU for first-time users
     useEffect(() => {
+        const saved = loadLastModel();
+        if (saved) {
+            whisper.loadModel(saved.model, saved.device);
+            return;
+        }
         (async () => {
             try {
                 const adapter = await navigator.gpu?.requestAdapter();
@@ -60,7 +89,14 @@ export function App() {
                 /* no WebGPU */
             }
         })();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Save last-used model when loading completes
+    useEffect(() => {
+        if (whisper.modelState === "ready" && whisper.loadedModel) {
+            saveLastModel(whisper.loadedModel, device);
+        }
+    }, [whisper.modelState, whisper.loadedModel, device]);
 
     // When a new result arrives, save to history
     useEffect(() => {
